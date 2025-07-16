@@ -1,9 +1,12 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+const connectDB = require('./config/db');
+const taskRoutes = require('./routes/tasks');
+const authRoutes = require('./routes/auth');
+const errorMiddleware = require('./middleware/errorMiddleware');
+const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
-const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -17,32 +20,19 @@ app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Error logging middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
+// Routes
+app.use('/api/tasks', taskRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-const tasksRouter = require('./routes/tasks');
-app.use('/api/tasks', tasksRouter);
-const authRouter = require('./routes/auth');
-app.use('/api/auth', authRouter);
+// Error middleware (should be last)
+app.use(errorMiddleware);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('MongoDB connected');
+// Connect DB and start server
+connectDB().then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
 }); 

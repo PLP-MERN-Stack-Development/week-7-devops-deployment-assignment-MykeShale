@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import './Auth.css';
 
 const Signup = () => {
   const { signup, loading, error, user } = useAuth();
@@ -39,9 +38,9 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-container">
+    <div style={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>Sign Up</h2>
+        <h2 style={{textAlign: 'center', fontWeight: 'bold', fontSize: '2rem', marginBottom: '8px'}}>Sign Up</h2>
         <input
           type="text"
           placeholder="Username"
@@ -56,9 +55,9 @@ const Signup = () => {
           onChange={e => setPassword(e.target.value)}
         />
         <button type="submit" disabled={loading}>Sign Up</button>
-        {(formError || error) && <div className="auth-error">{formError || error}</div>}
-        {loading && <div className="auth-spinner"></div>}
-        <div className="auth-link">
+        {(formError || error) && <div className="error">{formError || error}</div>}
+        {loading && <div className="spinner"></div>}
+        <div style={{textAlign: 'center', fontSize: '1rem', marginTop: '4px'}}>
           Already have an account? <Link to="/login">Login</Link>
         </div>
       </form>

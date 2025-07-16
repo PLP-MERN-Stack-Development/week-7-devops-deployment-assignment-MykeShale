@@ -1,5 +1,4 @@
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import Login from './Login';
@@ -19,7 +18,7 @@ const PRIORITIES = [
 ];
 
 function ProtectedApp() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
 
   // Dark mode state and effect
@@ -54,7 +53,11 @@ function ProtectedApp() {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       setTasks(data.data || []);
     } catch (err) {
@@ -82,7 +85,10 @@ function ProtectedApp() {
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ title: newTask, dueDate: newDueDate || undefined, priority: newPriority }),
       });
       const result = await res.json();
@@ -101,7 +107,7 @@ function ProtectedApp() {
   const handleDelete = async (id: any) => {
     setDeletingId(null);
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error();
       setSuccess('Task deleted!');
@@ -114,7 +120,7 @@ function ProtectedApp() {
   // Toggle complete
   const handleToggle = async (id: any) => {
     try {
-      const res = await fetch(`${API_URL}/${id}/toggle`, { method: 'PATCH' });
+      const res = await fetch(`${API_URL}/${id}/toggle`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error();
       setSuccess('Task updated!');
@@ -137,7 +143,10 @@ function ProtectedApp() {
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ title: editingTitle, dueDate: editingDueDate || undefined, priority: editingPriority }),
       });
       const result = await res.json();
@@ -180,7 +189,10 @@ function ProtectedApp() {
       try {
         const res = await fetch(`${API_URL}/reorder`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ ids: reordered.map(t => t._id) }),
         });
         const result = await res.json();
@@ -211,167 +223,180 @@ function ProtectedApp() {
   };
 
   return (
-    <>
-      <button
-        className="dark-toggle"
-        onClick={() => setDarkMode(dm => !dm)}
-        style={{ position: 'absolute', top: 18, left: 24 }}
-        aria-label="Toggle dark mode"
-      >
-        {darkMode ? '🌙 Dark' : '☀️ Light'}
-      </button>
-      <button className="logout-btn" onClick={logout} style={{ position: 'absolute', top: 18, right: 24 }}>Logout</button>
-      <h1>Task Manager</h1>
-      <form className="task-form" onSubmit={handleAddTask} aria-label="Add task form">
-        <input
-          type="text"
-          placeholder="Add a new task..."
-          value={newTask}
-          onChange={e => setNewTask(e.target.value)}
-          aria-label="Task title"
-        />
-        <input
-          type="date"
-          value={newDueDate}
-          onChange={e => setNewDueDate(e.target.value)}
-          title="Due date"
-          aria-label="Due date"
-        />
-        <select value={newPriority} onChange={e => setNewPriority(e.target.value)} aria-label="Priority">
-          {PRIORITIES.map(p => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-        <button type="submit" disabled={!newTask.trim()}>Add</button>
-      </form>
-      <div className="filter-group" role="group" aria-label="Task filters">
-        {FILTERS.map((f, idx) => (
-          <button
-            key={f.value}
-            className={`filter-btn${filter === f.value ? ' active' : ''}`}
-            onClick={() => setFilter(f.value)}
-            type="button"
-            aria-label={f.label + ' tasks'}
-            ref={el => { filterRefs.current[idx] = el; }}
-            tabIndex={0}
-            onKeyDown={e => handleFilterKeyDown(e, idx)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-      {error && <div className="error" role="alert">{error}</div>}
-      {success && <div className="success" role="status">{success}</div>}
-      {loading ? (
-        <div className="spinner" aria-label="Loading"></div>
-      ) : filteredTasks.length === 0 ? (
-        <div className="empty-state">No tasks found. Add your first task!</div>
-      ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="task-list">
-            {(provided: any) => (
-              <ul className="task-list" ref={provided.innerRef} {...provided.droppableProps}>
-                {filteredTasks.map((task: any, idx: number) => (
-                  <Draggable key={task._id} draggableId={task._id} index={idx}>
-                    {(provided: any, snapshot: any) => (
-                      <li
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={
-                          task.completed
-                            ? 'completed' + (snapshot.isDragging ? ' dragging' : '')
-                            : (snapshot.isDragging ? ' dragging' : '')
-                        }
-                        style={{
-                          ...provided.draggableProps.style,
-                          boxShadow: snapshot.isDragging ? '0 2px 12px rgba(79,140,255,0.15)' : undefined,
-                        }}
-                      >
-                        <span onClick={() => handleToggle(task._id)} className="task-title">
-                          {editingId === task._id ? (
-                            <>
-                              <input
-                                value={editingTitle}
-                                onChange={e => setEditingTitle(e.target.value)}
-                                onBlur={() => handleEdit(task._id)}
-                                onKeyDown={e => e.key === 'Enter' && handleEdit(task._id)}
-                                autoFocus
-                                aria-label="Edit task title"
-                              />
-                              <input
-                                type="date"
-                                value={editingDueDate}
-                                onChange={e => setEditingDueDate(e.target.value)}
-                                onBlur={() => handleEdit(task._id)}
-                                aria-label="Edit due date"
-                              />
-                              <select
-                                value={editingPriority}
-                                onChange={e => setEditingPriority(e.target.value)}
-                                onBlur={() => handleEdit(task._id)}
-                                aria-label="Edit priority"
-                              >
-                                {PRIORITIES.map(p => (
-                                  <option key={p.value} value={p.value}>{p.label}</option>
-                                ))}
-                              </select>
-                            </>
-                          ) : (
-                            <>
-                              <input
-                                type="checkbox"
-                                checked={task.completed}
-                                onChange={() => handleToggle(task._id)}
-                                aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
-                              />
-                              <span
-                                className="title-text"
-                                onDoubleClick={() => startEdit(task)}
-                                aria-label={task.title}
-                              >
-                                {task.title}
-                              </span>
-                              <span className="meta">
-                                {task.dueDate && (
-                                  <span className={
-                                    'due-date' + (isOverdue(task) ? ' overdue' : '')
-                                  }>
-                                    Due: {new Date(task.dueDate).toLocaleDateString()}
+    <div style={{minHeight: '100vh', background: 'var(--bg, #f6f8fa)', display: 'flex', flexDirection: 'column'}}>
+      <header style={{width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 0 0 0', maxWidth: 600, margin: '0 auto', position: 'relative'}}>
+        <button
+          style={{position: 'relative', left: 0, padding: '8px 20px', borderRadius: 8, border: '1px solid #4f8cff', background: '#fff', color: '#2563eb', fontWeight: 600, marginRight: 8, minWidth: 80, cursor: 'pointer'}}
+          onClick={() => setDarkMode(dm => !dm)}
+          aria-label="Toggle dark mode"
+        >
+          {darkMode ? '🌙 Dark' : '☀️ Light'}
+        </button>
+        <button
+          style={{position: 'relative', right: 0, padding: '8px 20px', borderRadius: 8, border: '1px solid #e63946', background: '#fff', color: '#e63946', fontWeight: 600, minWidth: 80, cursor: 'pointer'}}
+          onClick={logout}
+        >
+          Logout
+        </button>
+      </header>
+      <main style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0 8px'}}>
+        <div className="main-container" style={{width: '100%', maxWidth: 600, margin: '32px auto', boxSizing: 'border-box'}}>
+          <h1 style={{textAlign: 'center', fontWeight: 'bold', fontSize: '2.2rem', marginBottom: '1.5rem', letterSpacing: 1}}>Task Manager</h1>
+          <form style={{marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center'}} onSubmit={handleAddTask} aria-label="Add task form">
+            <input
+              type="text"
+              placeholder="Add a new task..."
+              value={newTask}
+              onChange={e => setNewTask(e.target.value)}
+              aria-label="Task title"
+              style={{flex: 2, minWidth: 120, maxWidth: 220}}
+            />
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={e => setNewDueDate(e.target.value)}
+              title="Due date"
+              aria-label="Due date"
+              style={{flex: 1, minWidth: 100, maxWidth: 140}}
+            />
+            <select
+              value={newPriority}
+              onChange={e => setNewPriority(e.target.value)}
+              aria-label="Priority"
+              style={{flex: 1, minWidth: 90, maxWidth: 120}}
+            >
+              {PRIORITIES.map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={!newTask.trim()}
+              style={{flex: 1, minWidth: 80, maxWidth: 120, marginTop: 0}}
+            >
+              Add
+            </button>
+          </form>
+          <div style={{display: 'flex', gap: '8px', marginBottom: '1rem', justifyContent: 'center', flexWrap: 'wrap'}}>
+            {FILTERS.map((f, idx) => (
+              <button
+                key={f.value}
+                style={{fontWeight: filter === f.value ? 'bold' : 'normal', padding: '6px 18px', borderRadius: 8, border: filter === f.value ? '2px solid #2563eb' : '1px solid #c9c9c9', background: filter === f.value ? '#e0f2fe' : '#fff', color: filter === f.value ? '#2563eb' : '#222', minWidth: 80, cursor: 'pointer'}}
+                onClick={() => setFilter(f.value)}
+                aria-label={f.label + ' tasks'}
+                ref={el => { filterRefs.current[idx] = el; }}
+                tabIndex={0}
+                onKeyDown={e => handleFilterKeyDown(e, idx)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {error && <div className="error">{error}</div>}
+          {success && <div className="success">{success}</div>}
+          {loading ? (
+            <div className="spinner"></div>
+          ) : filteredTasks.length === 0 ? (
+            <div style={{textAlign: 'center', color: '#888', fontSize: '1.1rem', marginTop: '2rem'}}>No tasks found. Add your first task!</div>
+          ) : (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="task-list">
+                {(provided: any) => (
+                  <ul style={{listStyle: 'none', padding: 0, margin: 0, width: '100%'}}>
+                    {filteredTasks.map((task: any, idx: number) => (
+                      <Draggable key={task._id} draggableId={task._id} index={idx}>
+                        {(provided: any, snapshot: any) => (
+                          <li key={task._id} style={{display: 'flex', alignItems: 'center', background: '#f6f8fa', borderRadius: '10px', marginBottom: '12px', padding: '12px 16px', opacity: task.completed ? 0.6 : 1, textDecoration: task.completed ? 'line-through' : 'none', position: 'relative', flexWrap: 'wrap'}}>
+                            <span onClick={() => handleToggle(task._id)} style={{flex: 1, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', minWidth: 0}}>
+                              {editingId === task._id ? (
+                                <>
+                                  <input
+                                    value={editingTitle}
+                                    onChange={e => setEditingTitle(e.target.value)}
+                                    onBlur={() => handleEdit(task._id)}
+                                    onKeyDown={e => e.key === 'Enter' && handleEdit(task._id)}
+                                    autoFocus
+                                    aria-label="Edit task title"
+                                    style={{minWidth: 80, maxWidth: 180}}
+                                  />
+                                  <input
+                                    type="date"
+                                    value={editingDueDate}
+                                    onChange={e => setEditingDueDate(e.target.value)}
+                                    onBlur={() => handleEdit(task._id)}
+                                    aria-label="Edit due date"
+                                    style={{minWidth: 80, maxWidth: 120}}
+                                  />
+                                  <select
+                                    value={editingPriority}
+                                    onChange={e => setEditingPriority(e.target.value)}
+                                    onBlur={() => handleEdit(task._id)}
+                                    aria-label="Edit priority"
+                                    style={{minWidth: 70, maxWidth: 100}}
+                                  >
+                                    {PRIORITIES.map(p => (
+                                      <option key={p.value} value={p.value}>{p.label}</option>
+                                    ))}
+                                  </select>
+                                </>
+                              ) : (
+                                <>
+                                  <input
+                                    type="checkbox"
+                                    checked={task.completed}
+                                    onChange={() => handleToggle(task._id)}
+                                    aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
+                                    style={{width: '20px', height: '20px'}}
+                                  />
+                                  <span
+                                    style={{fontSize: '1.1rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180}}
+                                    onDoubleClick={() => startEdit(task)}
+                                    aria-label={task.title}
+                                  >
+                                    {task.title}
                                   </span>
-                                )}
-                                <span className={`priority ${task.priority}`}>
-                                  {PRIORITIES.find(p => p.value === task.priority)?.icon} {task.priority}
-                                </span>
-                              </span>
-                            </>
-                          )}
-                        </span>
-                        <button
-                          className="delete-btn"
-                          aria-label="Delete task"
-                          onClick={() => setDeletingId(task._id)}
-                        >
-                          &times;
-                        </button>
-                        {deletingId === task._id && (
-                          <div className="confirm-delete">
-                            <span>Delete this task?</span>
-                            <button onClick={() => handleDelete(task._id)} aria-label="Confirm delete">Yes</button>
-                            <button onClick={() => setDeletingId(null)} aria-label="Cancel delete">No</button>
-                          </div>
+                                  <span style={{display: 'flex', gap: '8px', marginLeft: '8px', fontSize: '0.95rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                                    {task.dueDate && (
+                                      <span style={{padding: '2px 8px', borderRadius: '6px', background: '#fffbe6', color: '#b45309', fontWeight: 600, border: isOverdue(task) ? '1px solid #e63946' : undefined}}>
+                                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                    <span style={{padding: '2px 8px', borderRadius: '6px', fontWeight: 600, background: task.priority === 'low' ? '#cffafe' : task.priority === 'medium' ? '#fef9c3' : '#fee2e2', color: task.priority === 'low' ? '#155e75' : task.priority === 'medium' ? '#92400e' : '#991b1b'}}>
+                                      {PRIORITIES.find(p => p.value === task.priority)?.icon} {task.priority}
+                                    </span>
+                                  </span>
+                                </>
+                              )}
+                            </span>
+                            <button
+                              style={{marginLeft: '8px', background: '#ffe4e6', color: '#be123c', borderRadius: '6px', padding: '4px 8px', border: 'none', minWidth: 40, minHeight: 32, fontSize: 20, fontWeight: 700, cursor: 'pointer'}}
+                              aria-label="Delete task"
+                              onClick={() => setDeletingId(task._id)}
+                            >
+                              &times;
+                            </button>
+                            {deletingId === task._id && (
+                              <div style={{position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                                <div style={{background: '#fff', border: '1px solid #e63946', borderRadius: '8px', padding: '16px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', gap: '12px', alignItems: 'center', zIndex: 1001, flexWrap: 'wrap'}}>
+                                  <span style={{color: '#e63946', fontWeight: 600}}>Delete this task?</span>
+                                  <button onClick={() => handleDelete(task._id)} style={{background: '#e63946', color: '#fff', borderRadius: '6px', padding: '4px 12px', fontWeight: 600, border: 'none', minWidth: 50}}>Yes</button>
+                                  <button onClick={() => setDeletingId(null)} style={{background: '#f3f3f3', color: '#222', borderRadius: '6px', padding: '4px 12px', fontWeight: 600, border: 'none', minWidth: 50}}>No</button>
+                                </div>
+                              </div>
+                            )}
+                          </li>
                         )}
-                      </li>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </ul>
-            )}
-          </Droppable>
-        </DragDropContext>
-      )}
-    </>
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }
 
