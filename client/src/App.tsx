@@ -305,7 +305,7 @@ function ProtectedApp() {
                   <ul style={{listStyle: 'none', padding: 0, margin: 0, width: '100%'}}>
                     {filteredTasks.map((task: any, idx: number) => (
                       <Draggable key={task._id} draggableId={task._id} index={idx}>
-                        {(provided: any, snapshot: any) => (
+                        {(_provided: any, _snapshot: any) => (
                           <li key={task._id} style={{display: 'flex', alignItems: 'center', background: '#f6f8fa', borderRadius: '10px', marginBottom: '12px', padding: '12px 16px', opacity: task.completed ? 0.6 : 1, textDecoration: task.completed ? 'line-through' : 'none', position: 'relative', flexWrap: 'wrap'}}>
                             <span onClick={() => handleToggle(task._id)} style={{flex: 1, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', minWidth: 0}}>
                               {editingId === task._id ? (
