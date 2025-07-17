@@ -20,6 +20,10 @@ app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
+app.get('/', (req, res) => {
+  res.send('API is running!');
+});
+
 // Routes
 app.use('/api/tasks', taskRoutes);
 app.use('/api/auth', authRoutes);
