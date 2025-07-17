@@ -1,78 +1,137 @@
-[![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=19942628&assignment_repo_type=AssignmentRepo)
-# Deployment and DevOps for MERN Applications
+# 🚀 Deployment & DevOps Documentation: MERN Task Manager
 
-This assignment focuses on deploying a full MERN stack application to production, implementing CI/CD pipelines, and setting up monitoring for your application.
+## Overview
+This document describes the complete deployment, CI/CD, environment configuration, and maintenance process for the MERN Task Manager application. It is based on the requirements from the Week 7 assignment and real project implementation.
 
-## Assignment Overview
+---
 
-You will:
-1. Prepare your MERN application for production deployment
-2. Deploy the backend to a cloud platform
-3. Deploy the frontend to a static hosting service
-4. Set up CI/CD pipelines with GitHub Actions
-5. Implement monitoring and maintenance strategies
+## 1. Project Structure
+- **Frontend:** React (Vite) app in `/client` (deployed to Netlify)
+- **Backend:** Express.js API in `/server` (deployed to Render)
+- **Database:** MongoDB Atlas
 
-## Getting Started
+---
 
-1. Accept the GitHub Classroom assignment invitation
-2. Clone your personal repository that was created by GitHub Classroom
-3. Follow the setup instructions in the `Week7-Assignment.md` file
-4. Use the provided templates and configuration files as a starting point
+## 2. Preparing for Deployment
 
-## Files Included
+### Frontend (React)
+- Production build with `npm run build` (outputs to `/client/dist`)
+- Code splitting and optimized assets via Vite
+- Environment variables managed via `.env` and Netlify/Vercel dashboard
 
-- `Week7-Assignment.md`: Detailed assignment instructions
-- `.github/workflows/`: GitHub Actions workflow templates
-- `deployment/`: Deployment configuration files and scripts
-- `.env.example`: Example environment variable templates
-- `monitoring/`: Monitoring configuration examples
+### Backend (Express)
+- Error handling and logging (morgan, error middleware)
+- Secure HTTP headers (helmet)
+- CORS configured for frontend domain
+- Environment variables via `.env` and Render dashboard
+- Health check endpoint: `/api/health`
 
-## Requirements
+### Database (MongoDB Atlas)
+- Cluster created on MongoDB Atlas
+- Database user with least privileges
+- Connection string stored in backend `.env` as `MONGO_URI`
 
-- A completed MERN stack application from previous weeks
-- Accounts on the following services:
-  - GitHub
-  - MongoDB Atlas
-  - Render, Railway, or Heroku (for backend)
-  - Vercel, Netlify, or GitHub Pages (for frontend)
-- Basic understanding of CI/CD concepts
+---
 
-## Deployment Platforms
+## 3. Deployment Steps
 
-### Backend Deployment Options
-- **Render**: Easy to use, free tier available
-- **Railway**: Developer-friendly, generous free tier
-- **Heroku**: Well-established, extensive documentation
+### Backend (Render)
+1. **Create a new Web Service** on Render.
+2. **Connect your GitHub repo** and select the `/server` directory.
+3. **Set environment variables** in Render dashboard:
+   - `MONGO_URI` (MongoDB Atlas connection string)
+   - `JWT_SECRET` (JWT signing secret)
+   - `FRONTEND_URL` (e.g., `https://your-frontend.netlify.app`)
+4. **Build & Start Command:**
+   - Build: *(none needed for Node.js)*
+   - Start: `node index.js` or `npm start`
+5. **Deploy** and note the backend URL (e.g., `https://your-backend.onrender.com`)
+6. **(Optional) Set up custom domain and HTTPS** in Render settings.
 
-### Frontend Deployment Options
-- **Vercel**: Optimized for React apps, easy integration
-- **Netlify**: Great for static sites, good CI/CD
-- **GitHub Pages**: Free, integrated with GitHub
+### Frontend (Netlify/Vercel)
+1. **Create a new site** and link your GitHub repo.
+2. **Set build settings:**
+   - Base directory: `/client`
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+3. **Set environment variable:**
+   - `VITE_API_URL=https://your-backend.onrender.com/api/tasks`
+4. **Deploy** and note the frontend URL (e.g., `https://your-frontend.netlify.app`)
+5. **(Optional) Set up custom domain and HTTPS** in Netlify/Vercel settings.
 
-## CI/CD Pipeline
+---
 
-The assignment includes templates for setting up GitHub Actions workflows:
-- `frontend-ci.yml`: Tests and builds the React application
-- `backend-ci.yml`: Tests the Express.js backend
-- `frontend-cd.yml`: Deploys the frontend to your chosen platform
-- `backend-cd.yml`: Deploys the backend to your chosen platform
+## 4. Environment Variables
 
-## Submission
+### Backend (`/server/.env` or Render dashboard)
+```
+MONGO_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_jwt_secret
+FRONTEND_URL=https://your-frontend.netlify.app
+```
 
-Your work will be automatically submitted when you push to your GitHub Classroom repository. Make sure to:
+### Frontend (`/client/.env` or Netlify/Vercel dashboard)
+```
+VITE_API_URL=https://your-backend.onrender.com/api/tasks
+```
 
-1. Complete all deployment tasks
-2. Set up CI/CD pipelines with GitHub Actions
-3. Deploy both frontend and backend to production
-4. Document your deployment process in the README.md
-5. Include screenshots of your CI/CD pipeline in action
-6. Add URLs to your deployed applications
+> **Note:** Never commit real `.env` files. Use `.env.example` for templates.
 
-## Resources
+---
 
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com/)
-- [Render Documentation](https://render.com/docs)
-- [Railway Documentation](https://docs.railway.app/)
-- [Vercel Documentation](https://vercel.com/docs)
-- [Netlify Documentation](https://docs.netlify.com/) 
+## 5. CI/CD Pipeline
+- **GitHub Actions** (recommended):
+  - Lint, test, and build on every push
+  - Deploy to Render/Netlify/Vercel on successful build
+- **Render/Netlify/Vercel**: Automatic deploys on push to main branch
+- **Example workflow:**
+  - Push code → GitHub Actions run tests → If successful, auto-deploy to hosting
+
+---
+
+## 6. Monitoring & Maintenance
+- **Health check endpoint:** `/api/health` (used by Render for uptime monitoring)
+- **Logging:** Morgan (backend), Netlify/Vercel/Render logs (frontend/backend)
+- **Error tracking:** (Optional) Integrate Sentry or similar
+- **Performance:** Use Render/Netlify/Vercel dashboards for resource monitoring
+- **Backups:** Set up MongoDB Atlas backups
+- **Maintenance:**
+  - Regularly update dependencies
+  - Monitor logs for errors
+  - Document and test rollback procedures
+
+---
+
+## 7. Useful Links
+- **Frontend (Live):** [https://plp-task-app.netlify.app](https://plp-task-app.netlify.app)
+- **Backend (Live):** [https://week-7-devops-deployment-assignment-qyn7.onrender.com](https://week-7-devops-deployment-assignment-qyn7.onrender.com)
+- **Backend Health Check:** [https://week-7-devops-deployment-assignment-qyn7.onrender.com/api/health](https://week-7-devops-deployment-assignment-qyn7.onrender.com/api/health)
+
+---
+
+## 8. Screenshots & CI/CD
+### - Ci/CD Pipeline Screenshot:
+[CI/CD Pipeline](/Screenshots/CI-CD.png)
+
+---
+
+## 9. Troubleshooting
+- **CORS errors:** Ensure `FRONTEND_URL` in backend matches your deployed frontend (no trailing slash).
+- **404 on login:** Ensure frontend uses `/api/auth/login` and backend route is `/api/auth/login`.
+- **.env pushed to git:** Run `git rm --cached .env` and commit; ensure `.env` is in `.gitignore`.
+
+---
+
+## 10. References
+- [Render Docs](https://render.com/docs)
+- [Netlify Docs](https://docs.netlify.com/)
+- [Vercel Docs](https://vercel.com/docs)
+- [MongoDB Atlas Docs](https://www.mongodb.com/docs/atlas/)
+- [GitHub Actions Docs](https://docs.github.com/en/actions)
+
+---
+
+**Congratulations! Your MERN app is now production-ready, CI/CD-enabled, and fully documented.**
+
+
+
